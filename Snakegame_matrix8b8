@@ -1,0 +1,100 @@
+#include <LedControl.h>
+#include "binary.h"
+//                         DIN CLK CS
+LedControl lc = LedControl(12, 11, 10, 1);
+
+const int SW_pin = 2; 
+const int X_pin = A0; 
+const int Y_pin = A1;
+
+int playerX = 0;
+int playerY = 0;
+
+int targetX;
+int targetY;
+
+byte Frame[8];
+
+void setup() {
+  lc.shutdown(0, false);
+  lc.setIntensity(0, 8);
+  lc.clearDisplay(0);
+
+  pinMode(SW_pin, INPUT);
+  digitalWrite(SW_pin, HIGH);
+
+  Serial.begin(9600);
+
+  randomSeed(analogRead(A5));
+  spawnTarget();
+}
+
+void showFrame(byte frame[]) {
+  for (int i = 0; i < 8; i++) {
+    lc.setRow(0, i, frame[i]);
+  }
+}
+
+void clearFrame() {
+  for (int i = 0; i < 8; i++) {
+    Frame[i] = B00000000;
+  }
+}
+
+void drawPlayer() {
+  Frame[playerY] |= 1 << (7 - playerX);
+}
+
+void drawTarget() {
+  Frame[targetY] |= 1 << (7 - targetX);
+}
+
+void spawnTarget() {
+  do {
+    targetX = random(0, 8);
+    targetY = random(0, 8);
+  } while (targetX == playerX && targetY == playerY);
+}
+
+void movePlayer() {
+
+  int xValue = analogRead(X_pin);
+  int yValue = analogRead(Y_pin);
+
+  if (xValue < 100 && playerX > 0) {
+    playerX--;
+    delay(120);
+  }
+
+  if (xValue > 900 && playerX < 7) {
+    playerX++;
+    delay(120);
+  }
+
+  if (yValue < 100 && playerY > 0) {
+    playerY--;
+    delay(120);
+  }
+
+  if (yValue > 900 && playerY < 7) {
+    playerY++;
+    delay(120);
+  }
+}
+
+void checkCollision() {
+  if (playerX == targetX && playerY == targetY) {
+    spawnTarget();
+  }
+}
+
+void loop() {
+
+  movePlayer();
+  checkCollision();
+
+  clearFrame();
+  drawTarget();
+  drawPlayer();
+  showFrame(Frame);
+}
